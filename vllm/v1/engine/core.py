@@ -196,6 +196,8 @@ class EngineCore:
             self.step if self.batch_queue is None else self.step_with_batch_queue
         )
 
+        self.count = 0
+
     def _initialize_kv_caches(
         self, vllm_config: VllmConfig
     ) -> tuple[int, int, KVCacheConfig]:
@@ -318,6 +320,13 @@ class EngineCore:
         if not self.scheduler.has_requests():
             return {}, False
         scheduler_output = self.scheduler.schedule()
+
+        print(self.count, " ", scheduler_output, '!!!!!!!!!!!!!!!!!!!!!')
+        if self.count == 0:
+            print(len(scheduler_output.scheduled_new_reqs[0].prompt_token_ids))
+        self.count += 1                                         #AVAL DID THIS
+        t_start = time.perf_counter()                           #AVAL DID THIS
+
         model_output = self.execute_model_with_error_logging(
             self.model_executor.execute_model,  # type: ignore
             scheduler_output,
@@ -325,6 +334,9 @@ class EngineCore:
         engine_core_outputs = self.scheduler.update_from_output(
             scheduler_output, model_output
         )
+
+        t_end = time.perf_counter()                             #AVAL DID THIS
+        print(self.count, (t_end-t_start))                      #AVAL DID THIS
 
         return (engine_core_outputs, scheduler_output.total_num_scheduled_tokens > 0)
 
