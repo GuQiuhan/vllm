@@ -321,6 +321,7 @@ class EngineCore:
             return {}, False
         scheduler_output = self.scheduler.schedule()
 
+
         #print(self.count, " ", scheduler_output, '!!!!!!!!!!!!!!!!!!!!!')
         if self.count == 0:
             print(len(scheduler_output.scheduled_new_reqs[0].prompt_token_ids))
@@ -336,7 +337,7 @@ class EngineCore:
         )
 
         t_end = time.perf_counter()                             #AVAL DID THIS
-        print(self.count, (t_end-t_start))                      #AVAL DID THIS
+        print(self.count, t_end-t_start)
 
         return (engine_core_outputs, scheduler_output.total_num_scheduled_tokens > 0)
 

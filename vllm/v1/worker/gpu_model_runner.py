@@ -2504,8 +2504,11 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             ),
             record_function_or_nullcontext("Forward"),
             self.maybe_get_kv_connector_output(scheduler_output) as kv_connector_output,
-        ):
+        ):  
+            
+
             # @qiuhan:
+
             t0 = time.perf_counter()
             model_output = self._model_forward(
                 input_ids=input_ids,
@@ -2517,11 +2520,12 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             t1 = time.perf_counter()
             has_prefill = bool(getattr(scheduler_output, "scheduled_new_reqs", []))
             stage = "prefill" if has_prefill else "decode"
-            print("*"*20)
+            
+            print("*****************************************")
             print(f"[ModelRunner] {stage} forward took {t1 - t0:.4f}s | "
             f"num_input_tokens={num_input_tokens} | "
             f"num_scheduled_tokens={num_scheduled_tokens}")
-            print("*"*20)
+            print("*****************************************")
 
         with record_function_or_nullcontext("Postprocess"):
             if self.use_aux_hidden_state_outputs:
