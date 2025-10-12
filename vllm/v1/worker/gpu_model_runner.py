@@ -2505,10 +2505,8 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             record_function_or_nullcontext("Forward"),
             self.maybe_get_kv_connector_output(scheduler_output) as kv_connector_output,
         ):  
-            
 
             # @qiuhan:
-
             t0 = time.perf_counter()
             model_output = self._model_forward(
                 input_ids=input_ids,

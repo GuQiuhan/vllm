@@ -323,8 +323,8 @@ class EngineCore:
 
 
         #print(self.count, " ", scheduler_output, '!!!!!!!!!!!!!!!!!!!!!')
-        if self.count == 0:
-            print(len(scheduler_output.scheduled_new_reqs[0].prompt_token_ids))
+        #if self.count == 0:
+        #    print(len(scheduler_output.scheduled_new_reqs[0].prompt_token_ids))
         self.count += 1                                         #AVAL DID THIS
         t_start = time.perf_counter()                           #AVAL DID THIS
 
@@ -332,11 +332,13 @@ class EngineCore:
             self.model_executor.execute_model,  # type: ignore
             scheduler_output,
         )
+
+        t_end = time.perf_counter()                             #AVAL DID THIS
         engine_core_outputs = self.scheduler.update_from_output(
             scheduler_output, model_output
         )
 
-        t_end = time.perf_counter()                             #AVAL DID THIS
+        
         print(self.count, t_end-t_start)
 
         return (engine_core_outputs, scheduler_output.total_num_scheduled_tokens > 0)
