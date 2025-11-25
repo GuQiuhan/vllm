@@ -60,6 +60,8 @@ class SingleTypeKVCacheManager(ABC):
         self.kv_cache_group_id = kv_cache_group_id
         self._null_block = block_pool.null_block
 
+
+
     def get_num_blocks_to_allocate(
         self, request_id: str, num_tokens: int, new_computed_blocks: list[KVCacheBlock]
     ) -> int:
@@ -109,9 +111,10 @@ class SingleTypeKVCacheManager(ABC):
             assert len(req_blocks) == 0
             req_blocks.extend(new_computed_blocks)
             self.num_cached_block[request_id] = len(new_computed_blocks)
-        else:
-            # A running request. Should not have new computed blocks.
-            assert len(new_computed_blocks) == 0
+        # @qiuhan:
+        #else:
+        #    # A running request. Should not have new computed blocks.
+        #    assert len(new_computed_blocks) == 0
 
     def allocate_new_blocks(
         self, request_id: str, num_tokens: int
@@ -254,8 +257,9 @@ class SingleTypeKVCacheManager(ABC):
 
 
 class FullAttentionManager(SingleTypeKVCacheManager):
+
     @classmethod
-    def find_longest_cache_hit(
+    def find_longest_cache_hit_test(
         cls,
         block_hashes: list[BlockHash],
         max_length: int,
@@ -265,6 +269,8 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         use_eagle: bool,
         dcp_world_size: int = 1,
     ) -> tuple[list[KVCacheBlock], ...]:
+        
+        print("SingleTypeKVCacheManager: FullAttentionManager")
         assert isinstance(
             kv_cache_spec, (FullAttentionSpec, ChunkedLocalAttentionSpec)
         ), (
@@ -278,6 +284,13 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         if dcp_world_size > 1:
             block_size *= dcp_world_size
         max_num_blocks = max_length // block_size
+        
+        # @qiuhan: for miss, miss, ..., miss, hit, hit, ..., miss, miss
+        _last_missing_prefix_blocks = None
+
+        missing_prefix_blocks = 0
+        seen_hit_suffix = False
+
         for block_hash in itertools.islice(block_hashes, max_num_blocks):
             # block_hashes is a chain of block hashes. If a block hash is not
             # in the cached_block_hash_to_id, the following block hashes are
@@ -285,19 +298,81 @@ class FullAttentionManager(SingleTypeKVCacheManager):
             if cached_block := block_pool.get_cached_block(
                 block_hash, kv_cache_group_ids
             ):
+                seen_hit_suffix = True
+
                 for computed, cached in zip(computed_blocks, cached_block):
                     computed.append(cached)
             else:
-                break
+                #break
+                if not seen_hit_suffix:
+                    # miss: calculate and skip
+                    missing_prefix_blocks += 1
+                    continue
+                else:
+                    # miss again, break
+                    break
+                
         if use_eagle and computed_blocks[0]:
             for computed in computed_blocks:
                 computed.pop()
+
+        if seen_hit_suffix:
+            _last_missing_prefix_blocks = missing_prefix_blocks # FullAttentionManager._last_missing_prefix_blocks
+
+        return computed_blocks, _last_missing_prefix_blocks # _last_missing_prefix_blocks either be None -> no prefix match, or [0,1,2,..] representing how many blocks need to be recompute
+    
+    @classmethod
+    def find_longest_cache_hit(
+        cls,
+        block_hashes: list[BlockHash],
+        max_length: int,
+        kv_cache_group_ids: list[int],
+        block_pool: BlockPool,
+        kv_cache_spec: KVCacheSpec,
+        use_eagle: bool,
+        dcp_world_size: int = 1,
+    ) -> tuple[list[KVCacheBlock], ...]:
+        
+        assert isinstance(
+            kv_cache_spec, (FullAttentionSpec, ChunkedLocalAttentionSpec)
+        ), (
+            "FullAttentionManager can only be used for full attention "
+            "and chunked local attention groups"
+        )
+        computed_blocks: tuple[list[KVCacheBlock], ...] = tuple(
+            [] for _ in range(len(kv_cache_group_ids))
+        )
+        block_size = kv_cache_spec.block_size
+        if dcp_world_size > 1:
+            block_size *= dcp_world_size
+        max_num_blocks = max_length // block_size
+        
+
+        for block_hash in itertools.islice(block_hashes, max_num_blocks):
+            # block_hashes is a chain of block hashes. If a block hash is not
+            # in the cached_block_hash_to_id, the following block hashes are
+            # not computed yet for sure.
+            if cached_block := block_pool.get_cached_block(
+                block_hash, kv_cache_group_ids
+            ):
+
+                for computed, cached in zip(computed_blocks, cached_block):
+                    computed.append(cached)
+            else:
+                    break
+                
+        if use_eagle and computed_blocks[0]:
+            for computed in computed_blocks:
+                computed.pop()
+
         return computed_blocks
+
 
     def remove_skipped_blocks(self, request_id: str, num_computed_tokens: int) -> None:
         # No need to remove blocks for full attention.
         pass
-
+    
+    # prefix matching here
     def get_num_common_prefix_blocks(self, running_request_id: str) -> int:
         blocks = self.req_to_blocks[running_request_id]
         num_common_blocks = 0

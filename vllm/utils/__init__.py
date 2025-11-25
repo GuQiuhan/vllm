@@ -2961,6 +2961,7 @@ def run_method(
     cloudpickle.
     If the method is a callable, it will be called directly.
     """
+    print(method, type(method))
     if isinstance(method, bytes):
         func = partial(cloudpickle.loads(method), obj)
     elif isinstance(method, str):

@@ -78,6 +78,10 @@ class EngineCoreClient(ABC):
         log_stats: bool,
     ) -> "EngineCoreClient":
         # TODO: support this for debugging purposes.
+
+        print("asyncio_mode:", asyncio_mode)
+        print("multiprocess_mode:", multiprocess_mode)
+        multiprocess_mode = False # @qiuhan
         if asyncio_mode and not multiprocess_mode:
             raise NotImplementedError(
                 "Running EngineCore in asyncio without multiprocessing "

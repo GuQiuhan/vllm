@@ -2413,6 +2413,9 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
         scheduler_output: "SchedulerOutput",
         intermediate_tensors: Optional[IntermediateTensors] = None,
     ) -> Union[ModelRunnerOutput, AsyncModelRunnerOutput, IntermediateTensors]:
+        
+
+        tt0=time.perf_counter()
         with record_function_or_nullcontext("Preprocess"):
             with self.synchronize_input_prep():
                 # Update persistent batch states.
@@ -2490,6 +2493,9 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             ):
                 cudagraph_runtime_mode = CUDAGraphMode.NONE
 
+        tt1=time.perf_counter()
+        print(f"tt:{tt1-tt0}")
+
         # Run the model.
         # Use persistent buffers for CUDA graphs.
         with (
@@ -2505,8 +2511,9 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             record_function_or_nullcontext("Forward"),
             self.maybe_get_kv_connector_output(scheduler_output) as kv_connector_output,
         ):  
-
+            
             # @qiuhan:
+            print("5")
             t0 = time.perf_counter()
             model_output = self._model_forward(
                 input_ids=input_ids,
@@ -2524,6 +2531,9 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             f"num_input_tokens={num_input_tokens} | "
             f"num_scheduled_tokens={num_scheduled_tokens}")
             print("*****************************************")
+            print("6")
+
+        tt0=time.perf_counter()
 
         with record_function_or_nullcontext("Postprocess"):
             if self.use_aux_hidden_state_outputs:
@@ -2672,6 +2682,8 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
         )
 
         if not self.use_async_scheduling:
+            tt1=time.perf_counter()
+            print(f"tt2:{tt1-tt0}")
             return output
 
         async_output = AsyncGPUModelRunnerOutput(
@@ -2688,6 +2700,8 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             async_output.async_copy_ready_event,
         )
 
+        tt1=time.perf_counter()
+        print(f"tt2:{tt1-tt0}")
         return async_output
 
     def take_draft_token_ids(self) -> Optional[DraftTokenIds]:

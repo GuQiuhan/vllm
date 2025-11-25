@@ -319,7 +319,7 @@ class EngineCore:
         # or finished and not yet removed from the batch.
         if not self.scheduler.has_requests():
             return {}, False
-        scheduler_output = self.scheduler.schedule()
+        scheduler_output = self.scheduler.schedule_test()
 
 
         #print(self.count, " ", scheduler_output, '!!!!!!!!!!!!!!!!!!!!!')
@@ -327,12 +327,12 @@ class EngineCore:
         #    print(len(scheduler_output.scheduled_new_reqs[0].prompt_token_ids))
         self.count += 1                                         #AVAL DID THIS
         t_start = time.perf_counter()                           #AVAL DID THIS
-
+        print("1")
         model_output = self.execute_model_with_error_logging(
             self.model_executor.execute_model,  # type: ignore
             scheduler_output,
         )
-
+        
         t_end = time.perf_counter()                             #AVAL DID THIS
         engine_core_outputs = self.scheduler.update_from_output(
             scheduler_output, model_output
@@ -340,6 +340,7 @@ class EngineCore:
 
         
         print(self.count, t_end-t_start)
+        print("2")
 
         return (engine_core_outputs, scheduler_output.total_num_scheduled_tokens > 0)
 
@@ -376,7 +377,7 @@ class EngineCore:
 
         model_executed = False
         if self.scheduler.has_requests():
-            scheduler_output = self.scheduler.schedule()
+            scheduler_output = self.scheduler.schedule_test()
             future = self.model_executor.execute_model(scheduler_output, non_block=True)
             batch_queue.appendleft((future, scheduler_output))  # type: ignore[arg-type]
 

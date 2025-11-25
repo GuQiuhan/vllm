@@ -194,6 +194,14 @@ class KVCacheCoordinator(ABC):
     ) -> tuple[tuple[list[KVCacheBlock], ...], int]:
         pass
 
+    @abstractmethod
+    def find_longest_cache_hit_test(
+        self,
+        block_hashes: list[BlockHash],
+        max_cache_hit_length: int,
+    ) -> tuple[tuple[list[KVCacheBlock], ...], int, int]:
+        pass
+
 
 class KVCacheCoordinatorNoPrefixCache(KVCacheCoordinator):
     """
@@ -268,6 +276,32 @@ class UnitaryKVCacheCoordinator(KVCacheCoordinator):
             "UnitaryKVCacheCoordinator assumes only one kv cache group"
         )
 
+    def find_longest_cache_hit_test(
+        self,
+        block_hashes: list[BlockHash],
+        max_cache_hit_length: int,
+    ) -> tuple[tuple[list[KVCacheBlock], ...], int]:
+        hit_blocks, num_missing_prefix_blocks = self.single_type_managers[0].find_longest_cache_hit_test(
+            block_hashes=block_hashes,
+            max_length=max_cache_hit_length,
+            kv_cache_group_ids=[0],
+            block_pool=self.block_pool,
+            kv_cache_spec=self.kv_cache_spec,
+            use_eagle=self.use_eagle,
+            dcp_world_size=self.dcp_world_size,
+        )
+
+        
+
+        print("UnitaryKVCacheCoordinator(KVCacheCoordinator)")
+        #print(f"self.single_type_managers[0]._last_missing_prefix_blocks: {num_missing_prefix_blocks}")
+        print(f"hit_blocks={len(hit_blocks[0])}")
+
+        if num_missing_prefix_blocks is not None:
+            return hit_blocks, len(hit_blocks[0]) * self.block_size, num_missing_prefix_blocks* self.block_size
+        
+        return hit_blocks, len(hit_blocks[0]) * self.block_size, None
+    
     def find_longest_cache_hit(
         self,
         block_hashes: list[BlockHash],
@@ -282,6 +316,7 @@ class UnitaryKVCacheCoordinator(KVCacheCoordinator):
             use_eagle=self.use_eagle,
             dcp_world_size=self.dcp_world_size,
         )
+
         return hit_blocks, len(hit_blocks[0]) * self.block_size
 
 

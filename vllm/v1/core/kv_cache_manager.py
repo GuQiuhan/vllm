@@ -131,6 +131,14 @@ class KVCacheManager:
         self.block_pool = self.coordinator.block_pool
         self.kv_cache_config = kv_cache_config
 
+
+        # @qiuhan:
+        # Stores the suffix blocks that were cache hits (non-prefix hits), to be attached to the request after the missing prefix tokens are recomputed.
+        self._suffix_plan: dict[str, tuple[KVCacheBlocks, int]] = {}
+
+        # Records how many prefix tokens are missing (i.e., must be recomputed) before the cached suffix can be safely attached.
+        self._missing_prefix_tokens: dict[str, int] = {}
+
     @property
     def usage(self) -> float:
         """Get the KV cache usage.
@@ -199,6 +207,98 @@ class KVCacheManager:
                 self.prefix_cache_stats.hits += num_new_computed_tokens
 
         return KVCacheBlocks(computed_blocks), num_new_computed_tokens
+    
+
+    def get_computed_blocks_test(self, request: Request) -> tuple[KVCacheBlocks, int, int]:
+        """Get the computed (cached) blocks for the request.
+        Note that the computed blocks must be full.
+
+        Args:
+            request: The request to get the computed blocks.
+
+        Returns:
+            A tuple containing:
+                - A list of blocks that are computed for the request.
+                - The number of computed tokens.
+        """
+        # Prefix caching is disabled or
+        # When the request requires prompt logprobs, we skip prefix caching.
+        if not self.enable_caching or (
+            request.sampling_params is not None
+            and request.sampling_params.prompt_logprobs is not None
+        ):
+            return self.create_empty_block_list(), 0
+
+        # NOTE: When all tokens hit the cache, we must recompute the last token
+        # to obtain logits. Thus, set max_cache_hit_length to prompt_length - 1.
+        # This can trigger recomputation of an entire block, rather than just
+        # the single last token, because allocate_slots() requires
+        # num_computed_tokens to be block-size aligned. Removing this limitation
+        # could slightly improve performance in the future.
+        max_cache_hit_length = request.num_tokens - 1
+        computed_blocks, num_new_computed_tokens, missing_prefix_tokens = (
+            self.coordinator.find_longest_cache_hit_test(
+                request.block_hashes, max_cache_hit_length
+            )
+        )
+
+        if self.log_stats:
+            assert self.prefix_cache_stats is not None
+            if request.num_preemptions > 0:
+                # Previously preempted request
+                self.prefix_cache_stats.preempted_requests += 1
+                self.prefix_cache_stats.preempted_queries += request.num_tokens
+                self.prefix_cache_stats.preempted_hits += num_new_computed_tokens
+            else:
+                # New request
+                self.prefix_cache_stats.requests += 1
+                self.prefix_cache_stats.queries += request.num_tokens
+                self.prefix_cache_stats.hits += num_new_computed_tokens
+
+        if missing_prefix_tokens and  missing_prefix_tokens>0:
+            self._suffix_plan[request.request_id] = (computed_blocks, num_new_computed_tokens)
+            self._missing_prefix_tokens[request.request_id] = missing_prefix_tokens
+            return KVCacheBlocks(computed_blocks), num_new_computed_tokens, missing_prefix_tokens # tokens need to recompute for the following prefix
+
+        return KVCacheBlocks(computed_blocks), num_new_computed_tokens, None 
+    
+    def attach_cached_suffix(self, request: Request):
+        """
+        Attach the cached suffix blocks to the request after its missing prefix
+        tokens have been fully recomputed. This operation does not perform any
+        model forward computation; it simply reassigns ownership of the cached
+        blocks and updates the internal KV cache mappings.
+
+        Args:
+            request: The request whose suffix blocks should be attached.
+        """
+        rid = request.request_id
+        if rid not in self._suffix_plan:
+            return
+
+        # Retrieve cached suffix blocks and the corresponding token count.
+        suffix_blocks, suffix_tokens = self._suffix_plan.pop(rid)
+        missing_prefix_tokens = self._missing_prefix_tokens.pop(rid)
+
+        # Touch the blocks to prevent eviction.
+        self.block_pool.touch(suffix_blocks)
+
+        # Append the suffix blocks to this request's block list.
+        self.coordinator.save_new_computed_blocks(rid, suffix_blocks)
+
+        # Update the number of computed tokens.
+        request.num_computed_tokens += suffix_tokens
+        if request.num_cached_tokens < 0:
+            request.num_cached_tokens = request.num_computed_tokens
+        else:
+            request.num_cached_tokens += suffix_tokens
+
+        # Update KV cache mappings to reflect the newly attached suffix.
+        self.coordinator.cache_blocks(
+            request, min(request.num_computed_tokens, request.num_tokens)
+        )
+
+        print(f"[ATTACH-SUFFIX] req={rid} attached suffix={suffix_tokens} tokens")
 
     def allocate_slots(
         self,

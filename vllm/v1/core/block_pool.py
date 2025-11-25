@@ -166,6 +166,8 @@ class BlockPool:
         self.enable_kv_cache_events = enable_kv_cache_events
         self.kv_event_queue: list[KVCacheEvent] = []
 
+        self.counter = 0
+
     def get_cached_block(
         self, block_hash: BlockHash, kv_cache_group_ids: list[int]
     ) -> Optional[list[KVCacheBlock]]:
@@ -359,6 +361,22 @@ class BlockPool:
         self.free_block_queue.append_n(
             [block for block in blocks_list if block.ref_cnt == 0 and not block.is_null]
         )
+        
+        l=self.free_block_queue.get_all_free_blocks()
+        print("free")
+        for i in range(0, len(l)):
+            print(l[i])
+        print("****************\n\n\n")
+
+        if self.counter ==0:
+            self.counter += 1
+            self.free_block_queue.modification(6, 1)
+
+            l=self.free_block_queue.get_all_free_blocks()
+            print("free")
+            for i in range(0, len(l)):
+                print(l[i])
+
 
     def reset_prefix_cache(self) -> bool:
         """Reset prefix cache. This function may be used in RLHF

@@ -283,14 +283,22 @@ class LLMEngine:
             # Add the request to EngineCore.
             self.engine_core.add_request(child_request)
 
+    # @qiuhan: This is where to perform inference. LLM.generate() -> _run_engine() -> self.llm_engine.step()
     def step(self) -> Union[list[RequestOutput], list[PoolingRequestOutput]]:
         if self.should_execute_dummy_batch:
             self.should_execute_dummy_batch = False
             self.engine_core.execute_dummy_batch()
             return []
 
+        t0 = time.perf_counter() #@qiuhan: starting time
+
+        print("3")
         # 1) Get EngineCoreOutput from the EngineCore.
         outputs = self.engine_core.get_output()
+        dt = time.perf_counter() - t0
+        print(f"[STEP] time={dt:.6f}s") # @qiuhan
+        print("4")
+
 
         # 2) Process EngineCoreOutputs.
         iteration_stats = IterationStats() if self.log_stats else None

@@ -39,6 +39,32 @@ class SchedulerInterface(ABC):
             requests.
         """
         raise NotImplementedError
+    
+    @abstractmethod
+    def schedule_test(self) -> "SchedulerOutput":
+        """Schedule the requests to process in this scheduling step.
+
+        The scheduling decision is made at the iteration level. Each scheduling
+        step corresponds to a single forward pass of the model. Therefore, this
+        method is called repeatedly by a busy loop in the engine.
+
+        Essentially, the scheduler produces a dictionary of {req_id: num_tokens}
+        that specifies how many tokens to process for each request in this
+        scheduling step. For example, num_tokens can be as large as the number
+        of prompt tokens for new requests, or it can be 1 for the requests that
+        are auto-regressively generating new tokens one by one. Otherwise, it
+        can be somewhere in between in case of chunked prefills, prefix caching,
+        speculative decoding, etc.
+
+        Additionally, the scheduler also returns useful data about each request
+        or the batch as a whole. The model runner will use this information in
+        preparing inputs to the model.
+
+        Returns:
+            A SchedulerOutput object containing information about the scheduled
+            requests.
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def update_from_output(

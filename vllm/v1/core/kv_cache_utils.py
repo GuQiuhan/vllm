@@ -339,6 +339,72 @@ class FreeKVCacheBlockQueue:
 
         self.num_free_blocks += len(blocks)
 
+    # @qiuhan
+    # def modification(self, startID: int, endID: int) -> None: # startID > endID
+    #     to_move: list[KVCacheBlock] = []
+
+    #     blocks = self.get_all_free_blocks()
+    #     for block in blocks:
+    #         block_id = getattr(block, "block_id")
+    #         if endID <= block_id <= startID:
+    #             to_move.append(block)
+
+        
+
+    #     curr = self.fake_free_list_head.next_free_block
+    #     while curr is not self.fake_free_list_tail:
+    #         nxt = curr.next_free_block 
+    #         block_id = getattr(curr, "block_id") 
+    #         if endID <= block_id <= startID:
+    #             prev_node = curr.prev_free_block
+    #             next_node = curr.next_free_block
+    #             prev_node.next_free_block = next_node
+    #             next_node.prev_free_block = prev_node
+
+    #             curr.prev_free_block = None
+    #             curr.next_free_block = None
+
+    #             #to_move.append(curr)
+
+
+    #         curr = nxt
+    #     to_move[-1].next_free_block = self.fake_free_list_head.next_free_block
+    #     self.fake_free_list_head.next_free_block= to_move[0]
+    #     to_move[0].prev_free_block=self.fake_free_list_head
+
+    def modification(self, start_id, end_id):
+        # b1 -> b2 -> ... bi -> start_block ... end_block -> bj -> .... -> bn
+        # start_block ... end_block -> b1 ... -> bi -> bj -> ... -> bn
+
+        start_block = self.fake_free_list_head.next_free_block
+        end_block = self.fake_free_list_head.next_free_block
+
+        while True:
+            if start_block.block_id == start_id:
+                break
+            else:
+                start_block = start_block.next_free_block
+        while True:
+            if end_block.block_id == end_id:
+                break
+            else:
+                end_block = end_block.next_free_block
+
+        b1 = self.fake_free_list_head.next_free_block
+
+        bi = start_block.prev_free_block
+        bj = end_block.next_free_block
+
+        bi.next_free_block = bj
+        bj.prev_free_block = bi
+
+        end_block.next_free_block = b1 
+        b1.prev_free_block = end_block
+
+        start_block.prev_free_block = self.fake_free_list_head
+        self.fake_free_list_head.next_free_block = start_block
+
+
     def get_all_free_blocks(self) -> list[KVCacheBlock]:
         """Get all free blocks in the free list. Mainly used for testing.
 

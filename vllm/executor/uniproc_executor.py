@@ -66,16 +66,22 @@ class UniProcExecutor(ExecutorBase):
         kwargs: Optional[dict] = None,
         non_block: bool = False,
     ) -> list[Any]:
+        
+        #print("21")
+
         if kwargs is None:
             kwargs = {}
 
         if not non_block:
-            return [run_method(self.driver_worker, method, args, kwargs)]
+            #print("22")
+            l=[run_method(self.driver_worker, method, args, kwargs)]
+            return l
 
         try:
             result = run_method(self.driver_worker, method, args, kwargs)
             if isinstance(result, AsyncModelRunnerOutput):
                 if (async_thread := self.async_output_thread) is not None:
+                    #print("23")
                     return [async_thread.submit(result.get_output)]
                 result = result.get_output()
             future = Future[Any]()
@@ -83,6 +89,8 @@ class UniProcExecutor(ExecutorBase):
         except Exception as e:
             future = Future[Any]()
             future.set_exception(e)
+
+        #print("24")
         return [future]
 
     def check_health(self) -> None:
