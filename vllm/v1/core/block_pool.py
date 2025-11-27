@@ -370,7 +370,7 @@ class BlockPool:
 
         if self.counter ==0:
             self.counter += 1
-            self.free_block_queue.modification(6, 1)
+            self.free_block_queue.modification(193, 1)
 
             l=self.free_block_queue.get_all_free_blocks()
             print("free")

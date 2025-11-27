@@ -286,7 +286,7 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         max_num_blocks = max_length // block_size
         
         # @qiuhan: for miss, miss, ..., miss, hit, hit, ..., miss, miss
-        _last_missing_prefix_blocks = None
+        _last_missing_prefix_blocks = 0
 
         missing_prefix_blocks = 0
         seen_hit_suffix = False
@@ -300,10 +300,12 @@ class FullAttentionManager(SingleTypeKVCacheManager):
             ):
                 seen_hit_suffix = True
 
+                print(f"seen_hit_suffix:{seen_hit_suffix}")
+
                 for computed, cached in zip(computed_blocks, cached_block):
                     computed.append(cached)
             else:
-                #break
+                
                 if not seen_hit_suffix:
                     # miss: calculate and skip
                     missing_prefix_blocks += 1
@@ -319,7 +321,7 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         if seen_hit_suffix:
             _last_missing_prefix_blocks = missing_prefix_blocks # FullAttentionManager._last_missing_prefix_blocks
 
-        return computed_blocks, _last_missing_prefix_blocks # _last_missing_prefix_blocks either be None -> no prefix match, or [0,1,2,..] representing how many blocks need to be recompute
+        return computed_blocks, _last_missing_prefix_blocks # _last_missing_prefix_blocks either be [0,1,2,..] representing how many blocks need to be recompute before doing prefix matching
     
     @classmethod
     def find_longest_cache_hit(
@@ -352,7 +354,8 @@ class FullAttentionManager(SingleTypeKVCacheManager):
             # block_hashes is a chain of block hashes. If a block hash is not
             # in the cached_block_hash_to_id, the following block hashes are
             # not computed yet for sure.
-            if cached_block := block_pool.get_cached_block(
+            #@qiuhan: Cache of blocks that are used for prefix caching. It caches blocks from hash directly to a block or multiple blocks (i.e. {block_hash: KVCacheBlocks})
+            if cached_block := block_pool.get_cached_block(      
                 block_hash, kv_cache_group_ids
             ):
 

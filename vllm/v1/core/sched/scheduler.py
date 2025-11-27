@@ -1662,30 +1662,13 @@ class Scheduler(SchedulerInterface):
         # For logging.
         scheduled_timestamp = time.monotonic()
 
-        # ===================== @qiuhan: attach cached suffix =====================
-        # If a request has finished recomputing its missing prefix tokens,
-        # attach the cached suffix blocks (if any).
-        if hasattr(self.kv_cache_manager, "_missing_prefix_tokens"):
-            missing_dict = self.kv_cache_manager._missing_prefix_tokens
-            for req in list(self.running):
-                rid = req.request_id
-                missing = missing_dict.get(rid)
-                if missing is not None and req.num_computed_tokens >= missing:
-                    self.kv_cache_manager.attach_cached_suffix(req)
-        # ========================================================================
-
         # First, schedule the RUNNING requests.
         req_index = 0
         while req_index < len(self.running) and token_budget > 0:
             request = self.running[req_index]
 
-            # ---------------- @qiuhan: limit work to missing prefix if any ----------------
-            # By default, target is num_tokens_with_spec + placeholders (original behavior).
-            target_tokens = (
-                request.num_tokens_with_spec + request.num_output_placeholders
-            )
 
-            # If this request still has missing prefix tokens, only schedule up to that.
+            # ---------- @qiuhan: if missing prefix is already fully recomputed, attach suffix ----------
             missing_prefix_dict = getattr(
                 self.kv_cache_manager, "_missing_prefix_tokens", None
             )
@@ -1693,17 +1676,17 @@ class Scheduler(SchedulerInterface):
                 missing_prefix_dict is not None
                 and request.request_id in missing_prefix_dict
             ):
-                missing = missing_prefix_dict[request.request_id]
-                if request.num_computed_tokens < missing:
-                    target_tokens = min(target_tokens, missing)
-            # ----------------------------------------------------------------------
+                missing_total = missing_prefix_dict[request.request_id]
+                if request.num_computed_tokens >= missing_total:
+                    self.kv_cache_manager.attach_cached_suffix(request)
+        
 
-            num_new_tokens = target_tokens - request.num_computed_tokens
-            if (
-                0
-                < self.scheduler_config.long_prefill_token_threshold
-                < num_new_tokens
-            ):
+            num_new_tokens = (
+                request.num_tokens_with_spec
+                + request.num_output_placeholders
+                - request.num_computed_tokens
+            )
+            if 0 < self.scheduler_config.long_prefill_token_threshold < num_new_tokens:
                 num_new_tokens = self.scheduler_config.long_prefill_token_threshold
             num_new_tokens = min(num_new_tokens, token_budget)
 
@@ -1712,7 +1695,23 @@ class Scheduler(SchedulerInterface):
             num_new_tokens = min(
                 num_new_tokens, self.max_model_len - 1 - request.num_computed_tokens
             )
+            
+            # -------------- @ qiuhan: considering computing missing prefix first -------------------
+            missing_prefix_dict = getattr(
+                self.kv_cache_manager, "_missing_prefix_tokens", None
+            )
 
+            print(f"missing_prefix_dict: {missing_prefix_dict}") 
+            if (
+                missing_prefix_dict is not None
+                and request.request_id in missing_prefix_dict
+            ):
+                if request.num_computed_tokens < missing_prefix_dict[request.request_id]: # still in the stage of computing missing prefix
+                    num_new_tokens =min(num_new_tokens, missing_prefix_dict[request.request_id]-request.num_computed_tokens)
+                    print("Here recomputing")
+            # ----------------------------------------------------------------------------------------       
+
+ 
             # Schedule encoder inputs.
             encoder_inputs_to_schedule = None
             new_encoder_compute_budget = encoder_compute_budget
@@ -1993,7 +1992,7 @@ class Scheduler(SchedulerInterface):
                         missing = missing_prefix_dict[request.request_id]
                         if num_computed_tokens < missing:
                             target_tokens = min(target_tokens, missing)
-                    num_new_tokens = target_tokens - num_computed_tokens
+                    num_new_tokens = max(0, target_tokens - num_computed_tokens)
                     # ------------------------------------------------------------------------
 
                     if (
@@ -2181,6 +2180,8 @@ class Scheduler(SchedulerInterface):
         assert len(scheduled_new_reqs) + len(scheduled_resumed_reqs) + len(
             scheduled_running_reqs
         ) <= len(self.running)
+
+
 
         # Get the longest common prefix among all requests in the running queue.
         # This can be potentially used for cascade attention.

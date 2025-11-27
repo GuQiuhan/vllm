@@ -294,13 +294,12 @@ class UnitaryKVCacheCoordinator(KVCacheCoordinator):
         
 
         print("UnitaryKVCacheCoordinator(KVCacheCoordinator)")
-        #print(f"self.single_type_managers[0]._last_missing_prefix_blocks: {num_missing_prefix_blocks}")
+        print(f"self.single_type_managers[0]._last_missing_prefix_blocks: {num_missing_prefix_blocks}")
         print(f"hit_blocks={len(hit_blocks[0])}")
 
-        if num_missing_prefix_blocks is not None:
-            return hit_blocks, len(hit_blocks[0]) * self.block_size, num_missing_prefix_blocks* self.block_size
+        return hit_blocks, len(hit_blocks[0]) * self.block_size, num_missing_prefix_blocks* self.block_size # 0 if not applicable
         
-        return hit_blocks, len(hit_blocks[0]) * self.block_size, None
+
     
     def find_longest_cache_hit(
         self,

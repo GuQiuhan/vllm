@@ -227,7 +227,7 @@ class KVCacheManager:
             request.sampling_params is not None
             and request.sampling_params.prompt_logprobs is not None
         ):
-            return self.create_empty_block_list(), 0
+            return self.create_empty_block_list(), 0 , 0
 
         # NOTE: When all tokens hit the cache, we must recompute the last token
         # to obtain logits. Thus, set max_cache_hit_length to prompt_length - 1.
@@ -255,12 +255,12 @@ class KVCacheManager:
                 self.prefix_cache_stats.queries += request.num_tokens
                 self.prefix_cache_stats.hits += num_new_computed_tokens
 
-        if missing_prefix_tokens and  missing_prefix_tokens>0:
+        print(f"missing_prefix_tokens:{missing_prefix_tokens}")
+        if missing_prefix_tokens>0:
             self._suffix_plan[request.request_id] = (computed_blocks, num_new_computed_tokens)
             self._missing_prefix_tokens[request.request_id] = missing_prefix_tokens
-            return KVCacheBlocks(computed_blocks), num_new_computed_tokens, missing_prefix_tokens # tokens need to recompute for the following prefix
-
-        return KVCacheBlocks(computed_blocks), num_new_computed_tokens, None 
+            
+        return KVCacheBlocks(computed_blocks), num_new_computed_tokens,  missing_prefix_tokens # tokens need to recompute for the following prefix, 0 if not applicable
     
     def attach_cached_suffix(self, request: Request):
         """
@@ -287,11 +287,12 @@ class KVCacheManager:
         self.coordinator.save_new_computed_blocks(rid, suffix_blocks)
 
         # Update the number of computed tokens.
-        request.num_computed_tokens += suffix_tokens
-        if request.num_cached_tokens < 0:
-            request.num_cached_tokens = request.num_computed_tokens
-        else:
-            request.num_cached_tokens += suffix_tokens
+        prompt_len = getattr(request, "num_prompt_tokens", request.num_tokens)
+        logical_total = request.num_tokens_with_spec + request.num_output_placeholders
+        prompt_len = min(prompt_len, logical_total)
+        request.num_computed_tokens = prompt_len
+        request.num_cached_tokens = prompt_len
+
 
         # Update KV cache mappings to reflect the newly attached suffix.
         self.coordinator.cache_blocks(
