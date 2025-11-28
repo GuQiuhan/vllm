@@ -1672,14 +1672,20 @@ class Scheduler(SchedulerInterface):
             missing_prefix_dict = getattr(
                 self.kv_cache_manager, "_missing_prefix_tokens", None
             )
+            suffix_dict = getattr(
+                self.kv_cache_manager, "_suffix_plan", None
+            )
             if (
                 missing_prefix_dict is not None
+                and suffix_dict is not None
                 and request.request_id in missing_prefix_dict
             ):
                 missing_total = missing_prefix_dict[request.request_id]
-                if request.num_computed_tokens >= missing_total:
+                _, suffix_total = suffix_dict[request.request_id]
+                print(f"request.num_computed_tokens >= missing_total + suffix_total: {request.num_computed_tokens} >= {missing_total+ suffix_total}")
+                if request.num_computed_tokens >= missing_total + suffix_total: #request.num_computed_tokens represents the total number of hitting tokens, including the following suffix tokens
                     self.kv_cache_manager.attach_cached_suffix(request)
-        
+            # ------------------------------------------------------------------------------------------
 
             num_new_tokens = (
                 request.num_tokens_with_spec
@@ -1700,14 +1706,18 @@ class Scheduler(SchedulerInterface):
             missing_prefix_dict = getattr(
                 self.kv_cache_manager, "_missing_prefix_tokens", None
             )
-
-            print(f"missing_prefix_dict: {missing_prefix_dict}") 
+            suffix_dict = getattr(
+                self.kv_cache_manager, "_suffix_plan", None
+            )
             if (
                 missing_prefix_dict is not None
+                and suffix_dict is not None
                 and request.request_id in missing_prefix_dict
             ):
-                if request.num_computed_tokens < missing_prefix_dict[request.request_id]: # still in the stage of computing missing prefix
-                    num_new_tokens =min(num_new_tokens, missing_prefix_dict[request.request_id]-request.num_computed_tokens)
+                _, suffix_total = suffix_dict[request.request_id]
+                print(f"missing_prefix_dict: {missing_prefix_dict}") 
+                if request.num_computed_tokens < missing_prefix_dict[request.request_id] +  suffix_total: # still in the stage of computing missing prefix
+                    num_new_tokens =min(num_new_tokens, missing_prefix_dict[request.request_id] +  suffix_total -request.num_computed_tokens)
                     print("Here recomputing")
             # ----------------------------------------------------------------------------------------       
 
@@ -2197,7 +2207,7 @@ class Scheduler(SchedulerInterface):
                 )
             )
 
-            print(num_common_prefix_blocks)
+            print(f"num_common_prefix_blocks: {num_common_prefix_blocks}")
 
         # Construct the scheduler output.
         new_reqs_data = [

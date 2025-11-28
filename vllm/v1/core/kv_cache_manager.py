@@ -257,8 +257,10 @@ class KVCacheManager:
 
         print(f"missing_prefix_tokens:{missing_prefix_tokens}")
         if missing_prefix_tokens>0:
+            print("Constructing _missing_prefix_tokens")
             self._suffix_plan[request.request_id] = (computed_blocks, num_new_computed_tokens)
             self._missing_prefix_tokens[request.request_id] = missing_prefix_tokens
+            
             
         return KVCacheBlocks(computed_blocks), num_new_computed_tokens,  missing_prefix_tokens # tokens need to recompute for the following prefix, 0 if not applicable
     
@@ -287,11 +289,11 @@ class KVCacheManager:
         self.coordinator.save_new_computed_blocks(rid, suffix_blocks)
 
         # Update the number of computed tokens.
-        prompt_len = getattr(request, "num_prompt_tokens", request.num_tokens)
-        logical_total = request.num_tokens_with_spec + request.num_output_placeholders
-        prompt_len = min(prompt_len, logical_total)
-        request.num_computed_tokens = prompt_len
-        request.num_cached_tokens = prompt_len
+        #prompt_len = getattr(request, "num_prompt_tokens", request.num_tokens)
+        #logical_total = request.num_tokens_with_spec + request.num_output_placeholders
+        #prompt_len = min(prompt_len, logical_total)
+        #request.num_computed_tokens = prompt_len
+        #request.num_cached_tokens = prompt_len
 
 
         # Update KV cache mappings to reflect the newly attached suffix.
