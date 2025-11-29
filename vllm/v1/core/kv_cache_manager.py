@@ -288,12 +288,9 @@ class KVCacheManager:
         # Append the suffix blocks to this request's block list.
         self.coordinator.save_new_computed_blocks(rid, suffix_blocks)
 
-        # Update the number of computed tokens.
-        #prompt_len = getattr(request, "num_prompt_tokens", request.num_tokens)
-        #logical_total = request.num_tokens_with_spec + request.num_output_placeholders
-        #prompt_len = min(prompt_len, logical_total)
-        #request.num_computed_tokens = prompt_len
-        #request.num_cached_tokens = prompt_len
+        # Update the number of computed tokens.    
+        request.num_computed_tokens += suffix_tokens
+        request.num_cached_tokens = suffix_tokens
 
 
         # Update KV cache mappings to reflect the newly attached suffix.

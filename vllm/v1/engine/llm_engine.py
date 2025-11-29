@@ -292,12 +292,12 @@ class LLMEngine:
 
         t0 = time.perf_counter() #@qiuhan: starting time
 
-        print("3")
+        #print("3")
         # 1) Get EngineCoreOutput from the EngineCore.
         outputs = self.engine_core.get_output()
         dt = time.perf_counter() - t0
         print(f"[STEP] time={dt:.6f}s") # @qiuhan
-        print("4")
+        #print("4")
 
 
         # 2) Process EngineCoreOutputs.

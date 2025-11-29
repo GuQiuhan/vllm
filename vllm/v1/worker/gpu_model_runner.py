@@ -2513,7 +2513,7 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
         ):  
             
             # @qiuhan:
-            print("5")
+            #print("5")
             t0 = time.perf_counter()
             model_output = self._model_forward(
                 input_ids=input_ids,
@@ -2531,7 +2531,7 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             f"num_input_tokens={num_input_tokens} | "
             f"num_scheduled_tokens={num_scheduled_tokens}")
             print("*****************************************")
-            print("6")
+            #print("6")
 
         tt0=time.perf_counter()
 

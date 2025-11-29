@@ -363,18 +363,18 @@ class BlockPool:
         )
         
         l=self.free_block_queue.get_all_free_blocks()
-        print("free")
+        print("free list before modification: ")
         for i in range(0, len(l)):
             print(l[i])
-        print("****************\n\n\n")
+        print("\n\n\n")
 
         if self.counter ==0:
             self.counter += 1
-            self.free_block_queue.modification(1024, 1) # scenario 4
-            #self.free_block_queue.modification(3001, 1978) # scenario 2
+            #self.free_block_queue.modification(1024, 1) # scenario 4
+            self.free_block_queue.modification(3001, 1978) # scenario 2
 
             l=self.free_block_queue.get_all_free_blocks()
-            print("free")
+            print("free list after modification:")
             for i in range(0, len(l)):
                 print(l[i])
 
