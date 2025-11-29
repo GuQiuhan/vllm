@@ -370,8 +370,8 @@ class BlockPool:
 
         if self.counter ==0:
             self.counter += 1
-            #self.free_block_queue.modification(1024, 1) # scenario 4
-            self.free_block_queue.modification(3001, 1978) # scenario 2
+            self.free_block_queue.modification(1024, 1) # scenario 4
+            #self.free_block_queue.modification(3001, 1978) # scenario 2
 
             l=self.free_block_queue.get_all_free_blocks()
             print("free list after modification:")

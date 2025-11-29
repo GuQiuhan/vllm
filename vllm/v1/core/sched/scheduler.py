@@ -1938,6 +1938,7 @@ class Scheduler(SchedulerInterface):
                         new_computed_blocks,
                         num_new_local_computed_tokens,
                         missing_prefix_tokens,
+                        empty_blocks
                     ) = self.kv_cache_manager.get_computed_blocks_test(request)
 
                     # @qiuhan: Disable KVConnector
@@ -1968,6 +1969,7 @@ class Scheduler(SchedulerInterface):
 
                     if missing_prefix_tokens and missing_prefix_tokens > 0:
                         num_computed_tokens = 0 #@qiuhan: request will start from computing the first token
+                        new_computed_blocks = empty_blocks
                         print(
                             f"[SCHED-WAITING] req={request.request_id} "
                             f"missing_prefix_tokens={missing_prefix_tokens}, "

@@ -268,7 +268,7 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         kv_cache_spec: KVCacheSpec,
         use_eagle: bool,
         dcp_world_size: int = 1,
-    ) -> tuple[list[KVCacheBlock], ...]:
+    ):
         
         print("SingleTypeKVCacheManager: FullAttentionManager")
         assert isinstance(
@@ -280,6 +280,11 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         computed_blocks: tuple[list[KVCacheBlock], ...] = tuple(
             [] for _ in range(len(kv_cache_group_ids))
         )
+
+        inital_empty_blocks: tuple[list[KVCacheBlock], ...] = tuple(
+            [] for _ in range(len(kv_cache_group_ids))
+        )
+
         block_size = kv_cache_spec.block_size
         if dcp_world_size > 1:
             block_size *= dcp_world_size
@@ -321,7 +326,7 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         if seen_hit_suffix:
             _last_missing_prefix_blocks = missing_prefix_blocks # FullAttentionManager._last_missing_prefix_blocks
 
-        return computed_blocks, _last_missing_prefix_blocks # _last_missing_prefix_blocks either be [0,1,2,..] representing how many blocks need to be recompute before doing prefix matching
+        return computed_blocks, _last_missing_prefix_blocks, inital_empty_blocks # _last_missing_prefix_blocks either be [0,1,2,..] representing how many blocks need to be recompute before doing prefix matching
     
     @classmethod
     def find_longest_cache_hit(
@@ -344,6 +349,7 @@ class FullAttentionManager(SingleTypeKVCacheManager):
         computed_blocks: tuple[list[KVCacheBlock], ...] = tuple(
             [] for _ in range(len(kv_cache_group_ids))
         )
+
         block_size = kv_cache_spec.block_size
         if dcp_world_size > 1:
             block_size *= dcp_world_size

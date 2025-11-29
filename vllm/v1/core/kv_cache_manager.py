@@ -209,7 +209,7 @@ class KVCacheManager:
         return KVCacheBlocks(computed_blocks), num_new_computed_tokens
     
 
-    def get_computed_blocks_test(self, request: Request) -> tuple[KVCacheBlocks, int, int]:
+    def get_computed_blocks_test(self, request: Request):
         """Get the computed (cached) blocks for the request.
         Note that the computed blocks must be full.
 
@@ -236,7 +236,7 @@ class KVCacheManager:
         # num_computed_tokens to be block-size aligned. Removing this limitation
         # could slightly improve performance in the future.
         max_cache_hit_length = request.num_tokens - 1
-        computed_blocks, num_new_computed_tokens, missing_prefix_tokens = (
+        computed_blocks, num_new_computed_tokens, missing_prefix_tokens, empty_blocks = (
             self.coordinator.find_longest_cache_hit_test(
                 request.block_hashes, max_cache_hit_length
             )
@@ -262,7 +262,7 @@ class KVCacheManager:
             self._missing_prefix_tokens[request.request_id] = missing_prefix_tokens
             
             
-        return KVCacheBlocks(computed_blocks), num_new_computed_tokens,  missing_prefix_tokens # tokens need to recompute for the following prefix, 0 if not applicable
+        return KVCacheBlocks(computed_blocks), num_new_computed_tokens,  missing_prefix_tokens, empty_blocks # tokens need to recompute for the following prefix, 0 if not applicable
     
     def attach_cached_suffix(self, request: Request):
         """
