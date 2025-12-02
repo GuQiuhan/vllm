@@ -111,10 +111,18 @@ class SingleTypeKVCacheManager(ABC):
             assert len(req_blocks) == 0
             req_blocks.extend(new_computed_blocks)
             self.num_cached_block[request_id] = len(new_computed_blocks)
-        # @qiuhan:
-        #else:
-        #    # A running request. Should not have new computed blocks.
-        #    assert len(new_computed_blocks) == 0
+
+    def save_new_computed_blocks_test(
+        self, request_id: str, new_computed_blocks: list[KVCacheBlock]
+    ) -> None:
+        # attach suffix blocks.
+        print("enter save_new_computed_blocks_test")
+        req_blocks = self.req_to_blocks[request_id]
+        #assert len(req_blocks) == 0
+        req_blocks.extend(new_computed_blocks)
+        self.num_cached_block[request_id] = len(req_blocks)
+
+
 
     def allocate_new_blocks(
         self, request_id: str, num_tokens: int

@@ -98,6 +98,12 @@ class KVCacheCoordinator(ABC):
         for i, manager in enumerate(self.single_type_managers):
             manager.save_new_computed_blocks(request_id, new_computed_blocks[i])
 
+    def save_new_computed_blocks_test(
+        self, request_id: str, new_computed_blocks: tuple[list[KVCacheBlock], ...]
+    ) -> None:
+        for i, manager in enumerate(self.single_type_managers):
+            manager.save_new_computed_blocks_test(request_id, new_computed_blocks[i])
+
     def allocate_new_blocks(
         self, request_id: str, num_tokens: int, num_encoder_tokens: int = 0
     ) -> tuple[list[KVCacheBlock], ...]:

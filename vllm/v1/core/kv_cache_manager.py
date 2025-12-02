@@ -262,7 +262,7 @@ class KVCacheManager:
             self._missing_prefix_tokens[request.request_id] = missing_prefix_tokens
             
             
-        return KVCacheBlocks(computed_blocks), num_new_computed_tokens,  missing_prefix_tokens, empty_blocks # tokens need to recompute for the following prefix, 0 if not applicable
+        return KVCacheBlocks(computed_blocks), num_new_computed_tokens,  missing_prefix_tokens, KVCacheBlocks(empty_blocks) # tokens need to recompute for the following prefix, 0 if not applicable
     
     def attach_cached_suffix(self, request: Request):
         """
@@ -286,17 +286,16 @@ class KVCacheManager:
         self.block_pool.touch(suffix_blocks)
 
         # Append the suffix blocks to this request's block list.
-        self.coordinator.save_new_computed_blocks(rid, suffix_blocks)
+        self.coordinator.save_new_computed_blocks_test(rid, suffix_blocks)
 
         # Update the number of computed tokens.    
         request.num_computed_tokens += suffix_tokens
         request.num_cached_tokens = suffix_tokens
 
-
-        # Update KV cache mappings to reflect the newly attached suffix.
-        self.coordinator.cache_blocks(
-            request, min(request.num_computed_tokens, request.num_tokens)
-        )
+        # no need do update the hash
+        #self.coordinator.cache_blocks(
+        #    request, min(request.num_computed_tokens, request.num_tokens)
+        #)
 
         print(f"[ATTACH-SUFFIX] req={rid} attached suffix={suffix_tokens} tokens")
 

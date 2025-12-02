@@ -370,8 +370,53 @@ class BlockPool:
 
         if self.counter ==0:
             self.counter += 1
+
+            #self.free_block_queue.modification(2048, 1) # scenario 4
+            #self.free_block_queue.modification(3001, 954) # scenario 2
+
             self.free_block_queue.modification(1024, 1) # scenario 4
             #self.free_block_queue.modification(3001, 1978) # scenario 2
+
+            #self.free_block_queue.modification(512, 1) # scenario 4
+            #self.free_block_queue.modification(3001, 2490) # scenario 2
+
+            #self.free_block_queue.modification(256, 1) # scenario 4
+            #self.free_block_queue.modification(3001, 2746) # scenario 2
+
+            #self.free_block_queue.modification(128, 1) # scenario 4
+            #self.free_block_queue.modification(3001, 2874) # scenario 2
+
+            # 6001 blocks
+            #self.free_block_queue.modification(2048, 1) # scenario 4
+            #self.free_block_queue.modification(6001, 3954) # scenario 2
+
+            #self.free_block_queue.modification(1024, 1) # scenario 4
+            #self.free_block_queue.modification(6001, 4978) # scenario 2
+
+            #self.free_block_queue.modification(512, 1) # scenario 4
+            #self.free_block_queue.modification(6001, 5490) # scenario 2
+
+            #self.free_block_queue.modification(256, 1) # scenario 4
+            #self.free_block_queue.modification(6001, 5746) # scenario 2
+
+            #self.free_block_queue.modification(128, 1) # scenario 4
+            #self.free_block_queue.modification(6001, 5874) # scenario 2
+
+            # 8001 blocks
+            #self.free_block_queue.modification(2048, 1) # scenario 4
+            #self.free_block_queue.modification(8001, 5954) # scenario 2
+
+            #self.free_block_queue.modification(1024, 1) # scenario 4
+            #self.free_block_queue.modification(8001, 6978) # scenario 2
+
+            #self.free_block_queue.modification(512, 1) # scenario 4
+            #self.free_block_queue.modification(8001, 7490) # scenario 2
+
+            #self.free_block_queue.modification(256, 1) # scenario 4
+            #self.free_block_queue.modification(8001, 7746) # scenario 2
+
+            #self.free_block_queue.modification(128, 1) # scenario 4
+            #self.free_block_queue.modification(8001, 7874) # scenario 2
 
             l=self.free_block_queue.get_all_free_blocks()
             print("free list after modification:")
